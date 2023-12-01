@@ -85,7 +85,7 @@ func TestGetOAuthTokensOK(t *testing.T) {
 	var oauthStub = getOAuthStubOK(t)
 	defer oauthStub.Close()
 
-	m, err := GetOAuthTokens("admin", "admin", "", oauthStub.URL)
+	m, err := GetOAuthTokens("admin", "admin", "", "", oauthStub.URL)
 	if err != nil {
 		t.Error("Error in GetOAuthTokens()")
 	}

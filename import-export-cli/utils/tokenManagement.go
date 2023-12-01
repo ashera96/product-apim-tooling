@@ -226,8 +226,7 @@ func ExecutePreCommandWithOAuth(environment, flagUsername, flagPassword, mainCon
 		}
 
 		// Get OAuth Tokens
-		responseDataMap, _ := GetOAuthTokens(username, password,
-			GetBase64EncodedCredentials(clientID, clientSecret), tokenEndpoint)
+		responseDataMap, _ := GetOAuthTokens(username, password, clientID, clientSecret, tokenEndpoint)
 		accessToken := responseDataMap["access_token"]
 
 		return accessToken, nil
@@ -308,20 +307,39 @@ func GetBase64EncodedCredentials(key, secret string) (encodedValue string) {
 // GetOAuthTokens implemented using go-resty/resty
 // @param username
 // @param password
-// @param b64EncodedClientIDClientSecret
+// @param clientId
+// @param clientSecret
 // @param url : OAuth token endpoint
 // @return response as a map
 // @return error
-func GetOAuthTokens(username, password, b64EncodedClientIDClientSecret, url string) (map[string]string, error) {
-	body := "grant_type=password&username=" + username + "&password=" + encodeURL.QueryEscape(password) +
-		"&scope=apim:app_import_export+apim:api_import_export+apim:api_product_import_export+apim:app_manage+" +
-		"apim:sub_manage+apim:api_view+apim:api_delete+apim:app_owner_change+apim:subscribe+apim:api_publish+apim:admin"
+func GetOAuthTokens(username, password, clientId, clientSecret, url string) (map[string]string, error) {
+
+	// Check if clientSecret is a hash value (if hashed, then it is of format {"hash":"<hash value>","algorithm":"SHA-256"})
+	isClientSecretHashed := false
+	if len(clientSecret) > 0 {
+		var clientSecretMap map[string]string
+		err := json.Unmarshal([]byte(clientSecret), &clientSecretMap)
+		if err == nil {
+			isClientSecretHashed = true
+		}
+	}
 
 	// set headers
 	headers := make(map[string]string)
 	headers[HeaderContentType] = HeaderValueXWWWFormUrlEncoded
-	headers[HeaderAuthorization] = HeaderValueAuthBasicPrefix + " " + b64EncodedClientIDClientSecret
+
+	if !isClientSecretHashed {
+		headers[HeaderAuthorization] = HeaderValueAuthBasicPrefix + " " + GetBase64EncodedCredentials(clientId, clientSecret)
+	}
+
 	headers[HeaderAccept] = HeaderValueApplicationJSON
+
+	body := "grant_type=password&username=" + username + "&password=" + encodeURL.QueryEscape(password) +
+	"&scope=apim:app_import_export+apim:api_import_export+apim:api_product_import_export+apim:app_manage+" +
+	"apim:sub_manage+apim:api_view+apim:api_delete+apim:app_owner_change+apim:subscribe+apim:api_publish+apim:admin"
+	if isClientSecretHashed {
+		body += "&client_id=" + clientId
+	}
 
 	Logln(LogPrefixInfo + "connecting to " + url)
 	resp, err := InvokePOSTRequest(url, headers, body)

@@ -85,8 +85,7 @@ func GetDefaultCredentialStore() (Store, error) {
 func GetOAuthAccessToken(credential Credential, env string) (string, error) {
 	tokenEndpoint := utils.GetInternalTokenEndpointOfEnv(env, utils.MainConfigFilePath)
 	data, err := utils.GetOAuthTokens(credential.Username, credential.Password,
-		Base64Encode(credential.ClientId+":"+credential.ClientSecret),
-		tokenEndpoint)
+		credential.ClientId, credential.ClientSecret, tokenEndpoint)
 	if err != nil {
 		return "", err
 	}
